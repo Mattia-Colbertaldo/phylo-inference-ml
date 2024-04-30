@@ -405,6 +405,11 @@ getPredsMLE <- function(type, trees){
     n_param <- 6
     name.param <- c("lambda0", "lambda1", "mu0", "mu1", "q01", "q10") 
   }
+  else if (type == "musse"){
+    n_param <- 12
+    name.param <- c("lambda0", "lambda1", "lambda2", "mu0", "mu1", "mu2",
+                     "q01", "q02", "q10", "q12", "q20", "q21")
+  }
   
   pred.param <- vector(mode='list', length=n_param)
   names(pred.param) <- name.param
@@ -441,6 +446,21 @@ getPredsMLE <- function(type, trees){
       lik <- constrain(lik, mu0 ~ 0.)
       lik <- constrain(lik, mu1 ~ 0.)
       p <- starting.point.bisse(tree)
+      fit <- find.mle(lik, p, method="subplex")
+      pred <- c(as.numeric(fit$par.full))
+    }
+
+    else if (type == "musse"){
+      lik <- make.musse(tree, tree$tip.state, k=3)
+      lik <- constrain(lik, lambda1 ~ 2*lambda0)
+      lik <- constrain(lik, lambda2 ~ 3*lambda0)
+      lik <- constrain(lik, q01 ~ q10)
+      lik <- constrain(lik, q02 ~ q20)
+      lik <- constrain(lik, q12 ~ q21)
+      lik <- constrain(lik, mu0 ~ 0.)
+      lik <- constrain(lik, mu1 ~ 0.)
+      lik <- constrain(lik, mu2 ~ 0.)
+      p <- starting.point.musse(tree)
       fit <- find.mle(lik, p, method="subplex")
       pred <- c(as.numeric(fit$par.full))
     }
@@ -909,14 +929,137 @@ drawRateCRBD <- function(param.range){
 drawRateBiSSE <- function(param.range){
   
   lambda.range <- param.range[[1]]
-  q.range      <- param.range[[2]]
+  mu.range     <- param.range[[2]]
+  q.range      <- param.range[[3]]
   lambda0 <- runif(1, lambda.range[1], lambda.range[2])
-  lambda1 <- 2*lambda0
-  mu0     <- 0.
-  mu1     <- 0.
+  lambda1 <- runif(1, lambda.range[1], lambda.range[2])
+  mu0     <- runif(1, mu.range[1], mu.range[2])
+  mu1     <- runif(1, mu.range[1], mu.range[2])
   q01     <- runif(1, q.range[1], q.range[2])
-  q10     <- q01
+  q10     <- runif(1, q.range[1], q.range[2])
   vec.param <- c(lambda0, lambda1, mu0, mu1, q01, q10)
+  return(vec.param)
+  
+}
+
+# Bisse with also p0c, p0a, p1c, p1a: Conditional probabilities of shifting character states during speciation or lineage development.
+drawRateBiSSEness <- function(param.range){
+  
+  lambda.range <- param.range[[1]]
+  mu.range     <- param.range[[2]]
+  q.range      <- param.range[[3]]
+  p.range     <- param.range[[4]]
+  lambda0 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda1 <- runif(1, lambda.range[1], lambda.range[2])
+  mu0     <- runif(1, mu.range[1], mu.range[2])
+  mu1     <- runif(1, mu.range[1], mu.range[2])
+  q01     <- runif(1, q.range[1], q.range[2])
+  q10     <- runif(1, q.range[1], q.range[2])
+  p0c     <- runif(1, p.range[1], p.range[2])
+  p0a     <- runif(1, p.range[1], p.range[2])
+  p1c     <- runif(1, p.range[1], p.range[2])
+  p1a     <- runif(1, p.range[1], p.range[2])
+  vec.param <- c(lambda0, lambda1, mu0, mu1, q01, q10, p0c, p0a, p1c, p1a)
+  
+}
+
+drawRateMuSSE <- function(param.range){
+  
+  lambda.range <- param.range[[1]]
+  mu.range     <- param.range[[2]]
+  q.range     <- param.range[[3]]
+  lambda0 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda1 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda2 <- runif(1, lambda.range[1], lambda.range[2])
+  mu0     <- runif(1, mu.range[1], mu.range[2])
+  mu1     <- runif(1, mu.range[1], mu.range[2])
+  mu2     <- runif(1, mu.range[1], mu.range[2])
+  q01     <- runif(1, q.range[1], q.range[2])
+  q02     <- runif(1, q.range[1], q.range[2])
+  q12     <- runif(1, q.range[1], q.range[2])
+  q10     <- runif(1, q.range[1], q.range[2])
+  q20     <- runif(1, q.range[1], q.range[2])
+  q21     <- runif(1, q.range[1], q.range[2])
+  vec.param <- c(lambda0, lambda1, lambda2, mu0, mu1, mu2, q01, q02, q10, q12, q20, q21)
+  return(vec.param)
+  
+}
+
+# musse with 4 states: 4 lambda, 4 mu, 12 q
+drawRateMuSSE4 <- function(param.range){
+    
+    lambda.range <- param.range[[1]]
+    mu.range     <- param.range[[2]]
+    q.range     <- param.range[[3]]
+    lambda0 <- runif(1, lambda.range[1], lambda.range[2])
+    lambda1 <- runif(1, lambda.range[1], lambda.range[2])
+    lambda2 <- runif(1, lambda.range[1], lambda.range[2])
+    lambda3 <- runif(1, lambda.range[1], lambda.range[2])
+    mu0     <- runif(1, mu.range[1], mu.range[2])
+    mu1     <- runif(1, mu.range[1], mu.range[2])
+    mu2     <- runif(1, mu.range[1], mu.range[2])
+    mu3     <- runif(1, mu.range[1], mu.range[2])
+    q01     <- runif(1, q.range[1], q.range[2])
+    q02     <- runif(1, q.range[1], q.range[2])
+    q03     <- runif(1, q.range[1], q.range[2])
+    q10     <- runif(1, q.range[1], q.range[2])
+    q12     <- runif(1, q.range[1], q.range[2])
+    q13     <- runif(1, q.range[1], q.range[2])
+    q20     <- runif(1, q.range[1], q.range[2])
+    q21     <- runif(1, q.range[1], q.range[2])
+    q23     <- runif(1, q.range[1], q.range[2])
+    q30     <- runif(1, q.range[1], q.range[2])
+    q31     <- runif(1, q.range[1], q.range[2])
+    q32     <- runif(1, q.range[1], q.range[2])
+    vec.param <- c(lambda0, lambda1, lambda2, lambda3, mu0, mu1, mu2, mu3,
+                  q01, q02, q03, q10, q12, q13, q20, q21, q23, q30, q31, q32)
+    return(vec.param)
+    
+}
+
+drawRateGeoSSE <- function(param.range){
+  
+  lambda.range <- param.range[[1]]
+  mu.range     <- param.range[[2]]
+  q.range     <- param.range[[3]]
+  lambda0 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda1 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda01 <- runif(1, lambda.range[1], lambda.range[2])
+  mu0     <- runif(1, mu.range[1], mu.range[2])
+  mu1     <- runif(1, mu.range[1], mu.range[2])
+  q01     <- runif(1, q.range[1], q.range[2])
+  q10     <- runif(1, q.range[1], q.range[2])
+  vec.param <- c(lambda0, lambda1, lambda01, mu0, mu1, q01, q10)
+  return(vec.param)
+  
+}
+
+# λklm (where 1 ≤ k, l, m ≤ n),
+# µk (where 1 ≤ k ≤ n), qlm
+# (where 1 ≤ l ̸= m ≤ n)
+# Distinguishes between anagenetic and cladogenetic speciation with variable rates.
+# There will be n^2 cladogenesis rates and n extinction rates plus n(n − 1) transition rates,
+# making a total of n 2+n+n(n−1) parameters.
+
+# in this case it is 2 states only:
+# lambda111, lambda112, lambda122, lambda211, lambda212, lambda222, mu1, mu2, q12, q21
+
+drawRateClaSSE <- function(param.range){
+  
+  lambda.range <- param.range[[1]]
+  mu.range     <- param.range[[2]]
+  q.range     <- param.range[[3]]
+  lambda111 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda112 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda122 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda211 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda212 <- runif(1, lambda.range[1], lambda.range[2])
+  lambda222 <- runif(1, lambda.range[1], lambda.range[2])
+  mu1     <- runif(1, mu.range[1], mu.range[2])
+  mu2     <- runif(1, mu.range[1], mu.range[2])
+  q12     <- runif(1, q.range[1], q.range[2])
+  q21     <- runif(1, q.range[1], q.range[2])
+  vec.param <- c(lambda111, lambda112, lambda122, lambda211, lambda212, lambda222, mu1, mu2, q12, q21)
   return(vec.param)
   
 }
@@ -1039,6 +1182,344 @@ generatePhyloBiSSE <- function(n_trees, n_taxa, param.range, ss_check = TRUE){
   return(out)
 }
 
+generatePhyloBiSSEness <- function(n_trees, n_taxa, param.range, ss_check = TRUE){
+  
+  trees <- list()
+  name.param <- c("lambda0", "lambda1", "mu0", "mu1", "q01", "q10", "p0c", "p0a", "p1c", "p1a") 
+  true.param <- vector(mode='list', length=10)
+  names(true.param) <- name.param
+  
+  while(length(trees) < n_trees){
+    vec.param <- drawRateBiSSEness(param.range) # draw randomly param. values
+    n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+    
+    # Generate phylogeny 
+    tree <- NULL
+    lik  <- NULL
+    while(is.null(tree) | is.null(lik)){
+      #cat("Null tree or lik, retrying\n")
+      vec.param <- drawRateBiSSEness(param.range) # draw randomly param. values
+      n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size
+      tree <- tree.bisseness(vec.param, max.taxa = n_taxa.i, x0 = NA)
+      if (!(all(tree$tip.state == 0) | all(tree$tip.state == 1))){
+        lik <- make.bisseness(tree, tree$tip.state)
+      }
+    }
+    
+    # Checking that summary statistics have no NA
+    if (ss_check){
+      ss <- get_ss(tree) # compute summary statistics
+      no_NA_ss <- !any(is.na(ss)) # does SS have any NA values?
+    }
+
+    if (no_NA_ss || !ss_check){
+        trees <- append(trees, list(tree))                    # save tree
+        for (i in 1:10){
+          true.param[[i]] <- c(true.param[[i]], vec.param[i]) # save param.
+        }
+        progress(length(trees), n_trees, progress.bar = TRUE, # print
+                 init = (length(trees)==1))                   # progression
+      }
+    }
+
+  out <- list("trees"    = trees, 
+              "param"    = true.param)
+
+  return(out)
+}
+
+# Generate phylogenetic trees under MuSSE model: 3 lambda, 3 mu, and 6 q parameters
+generatePhyloMuSSE <- function(n_trees, n_taxa, param.range, ss_check = TRUE){
+  
+  trees <- list()
+  name.param <- c("lambda0", "lambda1", "lambda2", "mu0", "mu1", "mu2", "q01", "q02", "q12", "q10", "q20", "q21") 
+  true.param <- vector(mode='list', length=12)
+  names(true.param) <- name.param
+  
+  while(length(trees) < n_trees){
+    vec.param <- drawRateMuSSE(param.range) # draw randomly param. values
+    n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+    
+    # Generate phylogeny 
+    tree <- NULL
+    lik  <- NULL
+    #cat("Number of trees: ", length(trees), "\n")
+    while(is.null(tree) | is.null(lik)){
+
+      # try to generate a tree and a likelihood, otherwise try again
+      tryCatch(
+        {
+          tree <- tree.musse(vec.param, max.taxa = n_taxa.i, x0 = 1)
+          #cat("Number of trees: ", length(trees), ", tree generation ok \n")
+          if (!(all(tree$tip.state == 0) | all(tree$tip.state == 1) | all(tree$tip.state == 2))){
+            lik <- make.musse(tree, tree$tip.state, k=3)
+            #cat("Number of trees: ", length(trees), ", lik ok \n")
+            }
+            },
+        error = function(e) {
+          # This error is an open issue of diversitree package
+          print(e)
+          # go to next iteration of the while loop
+          tree <- NULL
+          lik  <- NULL
+        }
+      
+      )
+
+      # if tree and lik are null, try again
+      if (is.null(tree) | is.null(lik)){
+        vec.param <- drawRateMuSSE(param.range) # draw randomly param. values
+        n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+        
+        # Generate phylogeny 
+        tree <- NULL
+        lik  <- NULL
+        next
+      }
+
+
+    }
+    
+    # Checking that summary statistics have no NA
+    if (ss_check){
+      ss <- get_ss(tree) # compute summary statistics
+      no_NA_ss <- !any(is.na(ss)) # does SS have any NA values?
+    }
+    
+    if (no_NA_ss || !ss_check){
+        trees <- append(trees, list(tree))                    # save tree
+        for (i in 1:12){
+          true.param[[i]] <- c(true.param[[i]], vec.param[i]) # save param.
+        }
+        progress(length(trees), n_trees, progress.bar = TRUE, # print
+                 init = (length(trees)==1))                   # progression
+      }
+    }
+  
+  out <- list("trees"    = trees, 
+              "param"    = true.param)
+  
+  return(out)
+}
+
+# Musse with 4 states: 4 lambda, 4 mu, and 12 q parameters
+generatePhyloMuSSE4 <- function(n_trees, n_taxa, param.range, ss_check = TRUE){
+  
+  trees <- list()
+  name.param <- c("lambda0", "lambda1", "lambda2", "lambda3", "mu0", "mu1", "mu2", "mu3", 
+                  "q01", "q02", "q03", "q10", "q12", "q13", "q20", "q21", "q23", "q30", "q31", "q32") 
+  true.param <- vector(mode='list', length=20)
+  names(true.param) <- name.param
+  
+  while(length(trees) < n_trees){
+    vec.param <- drawRateMuSSE4(param.range) # draw randomly param. values
+    n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+    
+    # Generate phylogeny 
+    tree <- NULL
+    lik  <- NULL
+    while(is.null(tree) | is.null(lik)){
+      # try to generate a tree and a likelihood, otherwise try again
+      tryCatch(
+        {
+          tree <- tree.musse(vec.param, max.taxa = n_taxa.i, x0 = 1)
+          if (!(all(tree$tip.state == 0) | all(tree$tip.state == 1) | all(tree$tip.state == 2) | all(tree$tip.state == 3))){
+            lik <- make.musse(tree, tree$tip.state, k=4)
+          }
+        },
+        error = function(e) {
+          # This error is an open issue of diversitree package
+          print(e)
+          # go to next iteration of the while loop
+          tree <- NULL
+          lik  <- NULL
+        }
+      )
+      
+      # if tree and lik are null, try again
+      if (is.null(tree) | is.null(lik)){
+        vec.param <- drawRateMuSSE4(param.range) # draw randomly param. values
+        n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+        
+        # Generate phylogeny 
+        tree <- NULL
+        lik  <- NULL
+        next
+      }
+    }
+    
+    # Checking that summary statistics have no NA
+    if (ss_check){
+      ss <- get_ss(tree) # compute summary statistics
+      no_NA_ss <- !any(is.na(ss)) # does SS have any NA values?
+    }
+
+    if (no_NA_ss || !ss_check){
+        trees <- append(trees, list(tree))                    # save tree
+        for (i in 1:20){
+          true.param[[i]] <- c(true.param[[i]], vec.param[i]) # save param.
+        }
+        progress(length(trees), n_trees, progress.bar = TRUE, # print
+                 init = (length(trees)==1))                   # progression
+      }
+    }
+
+  out <- list("trees"    = trees, 
+              "param"    = true.param)
+
+  return(out)
+
+}
+
+generatePhyloGeoSSE <- function(n_trees, n_taxa, param.range, ss_check = TRUE){
+  
+  trees <- list()
+  name.param <- c("lambda0", "lambda1", "lambda01", "mu0", "mu1", "q01", "q10") 
+  true.param <- vector(mode='list', length=7)
+  names(true.param) <- name.param
+  
+  while(length(trees) < n_trees){
+    vec.param <- drawRateGeoSSE(param.range) # draw randomly param. values
+    n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+    
+    # Generate phylogeny 
+    tree <- NULL
+    lik  <- NULL
+    while(is.null(tree) | is.null(lik)){
+      # try to generate a tree and a likelihood, otherwise try again
+      tryCatch(
+        {
+          tree <- tree.geosse(vec.param, max.taxa = n_taxa.i, x0 = NA)
+          if (!(all(tree$tip.state == 0) | all(tree$tip.state == 1))){
+            lik <- make.geosse(tree, tree$tip.state)}
+            },
+        error = function(e) {
+          # This error is an open issue of diversitree package
+          print(e)
+          # go to next iteration of the while loop
+          tree <- NULL
+          lik  <- NULL
+        }
+      
+      )
+
+      # if tree and lik are null, try again
+      if (is.null(tree) | is.null(lik)){
+        vec.param <- drawRateGeoSSE(param.range) # draw randomly param. values
+        n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+        
+        # Generate phylogeny 
+        tree <- NULL
+        lik  <- NULL
+
+        next
+
+      }
+
+
+    }
+    
+    # Checking that summary statistics have no NA
+    if (ss_check){
+      ss <- get_ss(tree) # compute summary statistics
+      no_NA_ss <- !any(is.na(ss)) # does SS have any NA values?
+    }
+    
+    if (no_NA_ss || !ss_check){
+        trees <- append(trees, list(tree))                    # save tree
+        for (i in 1:7){
+          true.param[[i]] <- c(true.param[[i]], vec.param[i]) # save param.
+        }
+        progress(length(trees), n_trees, progress.bar = TRUE, # print
+                 init = (length(trees)==1))                   # progression
+      }
+    }
+  
+  out <- list("trees"    = trees, 
+              "param"    = true.param)
+  
+  return(out)
+}
+
+# λklm (where 1 ≤ k, l, m ≤ n),
+# µk (where 1 ≤ k ≤ n), qlm
+# (where 1 ≤ l ̸= m ≤ n)
+# Distinguishes between anagenetic and cladogenetic speciation with variable rates.
+# There will be n^2 cladogenesis rates and n extinction rates plus n(n − 1) transition rates,
+# making a total of n 2+n+n(n−1) parameters.
+
+# in this case it is 2 states only:
+# lambda111, lambda112, lambda122, lambda211, lambda212, lambda222, mu1, mu2, q12, q21
+
+generatePhyloClasse <- function(n_trees, n_taxa, param.range, ss_check = TRUE){
+  
+  trees <- list()
+  name.param <- c("lambda111", "lambda112", "lambda122", "lambda211", "lambda212", "lambda222", "mu1", "mu2", "q12", "q21") 
+  true.param <- vector(mode='list', length=10)
+  names(true.param) <- name.param
+  
+  while(length(trees) < n_trees){
+    vec.param <- drawRateClaSSE(param.range) # draw randomly param. values
+    n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+    
+    # Generate phylogeny 
+    tree <- NULL
+    lik  <- NULL
+    while(is.null(tree) | is.null(lik)){
+      # try to generate a tree and a likelihood, otherwise try again
+      tryCatch(
+        {
+          tree <- tree.classe(vec.param, max.taxa = n_taxa.i, x0 = NA)
+          if (!(all(tree$tip.state == 0) | all(tree$tip.state == 1))){
+            lik <- make.classe(tree, tree$tip.state)}
+            },
+        error = function(e) {
+          # This error is an open issue of diversitree package
+          print(e)
+          # go to next iteration of the while loop
+          tree <- NULL
+          lik  <- NULL
+        }
+      
+      )
+
+      # if tree and lik are null, try again
+      if (is.null(tree) | is.null(lik)){
+        vec.param <- drawRateClaSSE(param.range) # draw randomly param. values
+        n_taxa.i <- drawPhyloSize(n_taxa)       # draw phylogeny size 
+        
+        # Generate phylogeny 
+        tree <- NULL
+        lik  <- NULL
+
+        next
+
+      }
+
+    }
+
+      # Checking that summary statistics have no NA
+      if (ss_check){
+        ss <- get_ss(tree) # compute summary statistics
+        no_NA_ss <- !any(is.na(ss)) # does SS have any NA values?
+      }
+
+      if (no_NA_ss || !ss_check){
+          trees <- append(trees, list(tree))                    # save tree
+          for (i in 1:10){
+            true.param[[i]] <- c(true.param[[i]], vec.param[i]) # save param.
+          }
+          progress(length(trees), n_trees, progress.bar = TRUE, # print
+                   init = (length(trees)==1))                   # progression
+        }
+      }
+
+  out <- list("trees"    = trees, 
+              "param"    = true.param)
+
+  return(out)
+
+}
 
 generatePhylo <- function(model, n_trees, n_taxa, param.range, ss_check = TRUE){
   
@@ -1046,7 +1527,18 @@ generatePhylo <- function(model, n_trees, n_taxa, param.range, ss_check = TRUE){
     out <- generatePhyloCRBD(n_trees, n_taxa, param.range, ss_check)
   } else if (model == "bisse"){
     out <- generatePhyloBiSSE(n_trees, n_taxa, param.range, ss_check)
-  } else {print("Model unkown, model should either crbd or bisse.")}
+  } else if (model == "musse"){
+    out <- generatePhyloMuSSE(n_trees, n_taxa, param.range, ss_check)
+  } else if (model == "geosse") {
+    out <- generatePhyloGeoSSE(n_trees, n_taxa, param.range, ss_check)
+  } else if (model == "musse4") {
+    out <- generatePhyloMuSSE4(n_trees, n_taxa, param.range, ss_check)
+  } else if (model == "bisseness") {
+    out <- generatePhyloBiSSEness(n_trees, n_taxa, param.range, ss_check)
+  } else if (model == "classe") {
+    out <- generatePhyloClasse(n_trees, n_taxa, param.range, ss_check)
+  }
+   else {print("Model unkown.")}
 
 }
 
@@ -1208,15 +1700,24 @@ convert_ltt_dataframe_to_dataset_sizes <- function(df.ltt, df.rates){
 convert_encode_to_dataset <- function(tensor.encode, true.param){
   
   ds.encode <- torch::dataset(
-    
+    name <- "encode_dataset", 
     initialize = function(tensor.encode, true.param){
-      self$x <- torch_tensor(tensor.encode) # input 
-      self$y <- torch_tensor(do.call(cbind, true.param)) # target
-    },
-    .getitem = function(i) {list(x = self$x[,i]$unsqueeze(1), y = self$y[i,])},
-    .length = function() {self$y$size()[[1]]}
+      
+      self$x <- tensor.encode
+      self$y <- torch_tensor(do.call(cbind, true.param))
+      
+    }, 
+    
+    .getitem = function(i) {
+      list(x = self$x[i, ], y = self$y[i, ])
+    }, 
+    
+    .length = function() {
+      self$y$size()[[1]]
+    }
   )
- return(ds.encode)
+
+  return(ds.encode)
 }
 
 
@@ -1686,10 +2187,3 @@ convert_pred_GNN <- function(pred_GNN_from_py){
 }
 
 #### end ####
-
-
-
-
-
-
-

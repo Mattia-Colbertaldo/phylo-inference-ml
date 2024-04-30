@@ -25,9 +25,11 @@ knitr::opts_knit$set(root.dir = "../")
 
 ```{r}
 source("R/phylo-inference-ml.R")
+model <- "musse" # change if needed
+expname <- "honest" # change if needed
 set.seed(113)
-phylo <- readRDS("data/new-phylogeny-crbd.rds") # change file name if needed
-true_params <- readRDS("data/new-phylogeny-crbd-true.rds") # same
+phylo <- readRDS(paste("data/phylogeny-", model, "-", expname, ".rds", sep="")) # change file name if needed
+true_params <- readRDS(paste("data/true-parameters-", model, "-", expname, ".rds", sep="")) # same
 ```
 
 ## Summary statistics
@@ -43,7 +45,7 @@ sumstat <- generateSumStatFromPhylo(phylo, true_params)
 Saving
 
 ```{r}
-saveRDS(sumstat, "data/new-phylogeny-crbd-sumstat.rds")
+saveRDS(sumstat, paste("data/phylogeny-", model, "-", expname, "-sumstat.rds", sep=""))
 ```
 
 ## CBLV
@@ -55,15 +57,18 @@ call instead `generate_encoding_bisse`.
 
 ```{r}
 max_taxa <- 1000 # maximum phylogeny size, change if needed
-cblv <- generate_encoding(phylo, max_taxa) 
+# If model == "cbrv", do call
+#cblv <- generate_encoding(phylo, max_taxa) 
 # If model == "bisse", do call 
 # cblv <- generate_encoding_bisse(phylo, max_taxa)
+# If model == "musse", do call
+cblv <- generate_encoding_musse(phylo, max_taxa)
 ```
 
 Saving 
 
 ```{r}
-saveRDS(cblv, "data/new-phylogeny-crbd-cblv.rds")
+saveRDS(cblv, paste("data/phylogeny-", model, "-", expname, "-cblv.rds", sep=""))
 ```
 
 
@@ -82,7 +87,7 @@ ltt <- generate_ltt_dataframe(phylo, taxa_range, true_params)$ltt
 Saving 
 
 ```{r}
-saveRDS(ltt, "data/new-phylogeny-crbd-ltt.rds")
+saveRDS(ltt, paste("data/phylogeny-", model, "-", expname, "-ltt.rds", sep=""))
 ```
 
 
@@ -100,6 +105,6 @@ graphs <- generate_phylogeny_graph(phylo)
 Saving 
 
 ```{r}
-saveRDS(graphs, "data/new-phylogeny-crbd-graph.rds")
+saveRDS(graphs, paste("data/phylogeny-", model, "-", expname, "-graph.rds", sep=""))
 ```
 

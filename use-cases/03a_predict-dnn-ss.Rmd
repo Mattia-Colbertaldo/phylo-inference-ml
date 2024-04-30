@@ -13,6 +13,8 @@ and computed their summary statistics (`02_convert-phylogeny.Rmd`).
 
 ```{r setup, include=FALSE}
 knitr::opts_knit$set(root.dir = "../")
+model <- "musse"
+expname <- "30_4-honest"
 ```
 
 Data preparation: here we just need to scale the summary statistics,
@@ -22,11 +24,11 @@ so that they are all put on an equal footing.
 ```{r}
 source("R/phylo-inference-ml.R")
 set.seed(113)
-sumstat <- readRDS("data/new-phylogeny-crbd-sumstat.rds")
-true <- readRDS("data/new-phylogeny-crbd-true.rds")
+sumstat <- readRDS(paste("data/phylogeny-", model, "-", expname, "-sumstat.rds", sep=""))
+true <- readRDS(paste("data/true-parameters-", model, "-", expname, ".rds", sep=""))
 n_taxa <- c(100, 1000) # range of phylogeny size
 sumstat <- scale_summary_statistics(sumstat, c(100,1000), names(true))
-device = "cpu" # change if you want to compute GPUs
+device = "gpu" # change if you want to compute GPUs
 ```
 
 
@@ -35,11 +37,14 @@ device = "cpu" # change if you want to compute GPUs
 Define the of the training, validation and test sets. 
 
 ```{r}
-# Define size of datasets.
-n_train    <- 90
-n_valid    <- 5
-n_test     <- 5
-batch_size <- 4
+# Define size of datasets in percentage of the total number of phylogenies.
+total_number_phylogenies <- nrow(sumstat)
+n_train    <- 0.7 * total_number_phylogenies
+n_valid    <- 0.2 * total_number_phylogenies
+n_test     <- 0.1 * total_number_phylogenies
+batch_size <- 64
+
+# 
 
 # Pick the phylogenies randomly.
 ds <- convert_ss_dataframe_to_dataset(sumstat)
@@ -65,10 +70,10 @@ test_dl  <- test_ds  %>% dataloader(batch_size=1, shuffle=FALSE)
 # Specify neural network parameters. 
 n_in      <- length(train_ds[1]$x) # number of neurons of the input layer 
 n_out     <- length(true)
-n_hidden  <- 100 # number of neurons in the hidden layers 
-p_dropout <- 0.01 # dropout probability 
-n_epochs  <- 100 # maximum number of epochs for the training 
-patience  <- 4 # patience of the early stopping 
+n_hidden  <- 1000 # number of neurons in the hidden layers 
+p_dropout <- 0.05 # dropout probability 
+n_epochs  <- 1000 # maximum number of epochs for the training 
+patience  <- 50 # patience of the early stopping 
 
 # Build the neural network.
 dnn.net <- nn_module(
@@ -107,7 +112,7 @@ dnn.net <- nn_module(
 
 # Set up the neural network.
 dnn <- dnn.net() # create CNN
-dnn$to(device = device) # Move it to the choosen GPU
+dnn$to(device = device) # Move it to the chosen GPU
 opt <- optim_adam(params = dnn$parameters) # optimizer 
 ```
 
@@ -174,7 +179,8 @@ while (epoch < n_epochs & trigger < patience) {
   cat(sprintf("epoch %0.3d/%0.3d - valid - loss: %3.5f \n",
               epoch, n_epochs, current_loss))
   
-  epoch <- epoch + 1 
+  epoch <- epoch + 1
+
 }
 ```
 
@@ -190,7 +196,7 @@ names(pred) <- names(true)
 # Compute predictions 
 coro::loop(for (b in test_dl) {
   out <- dnn(b$x$to(device = device))
-  p <- as.numeric(out$to(device = "cpu")) # move the tensor to CPU 
+  p <- as.numeric(out$to(device = "gpu")) # move the tensor to CPU 
   for (i in 1:n_out){pred[[i]] <- c(pred[[i]], p[i])}
 })
 ```
@@ -200,9 +206,146 @@ plot the predicted value by the neural network vs. the true values.
 
 ```{r}
 par(mfrow=c(1,2))
-plot(true[[1]][test_indices], pred[[1]])
+plot(true[[1]][test_indices], pred[[1]], xlab="True", ylab="Predicted", title="lambda1")
 abline(0, 1)
-plot(true[[2]][test_indices], pred[[2]])
+plot(true[[2]][test_indices], pred[[2]], xlab="True", ylab="Predicted", title="lambda2")
 abline(0, 1)
+
+
+# musse model
+if (model == "musse")
+{ par(mfrow=c(4, 3))
+  for (i in 1:12){
+    plot(true[[i]][test_indices], pred[[i]], xlab="True", ylab="Predicted", main=names(true)[i])
+    abline(0, 1)
+  }}
+
+# geosse model (7 parameters)
+else if (model == "geosse")
+{ par(mfrow=c(4, 2))
+  for (i in 1:7){
+    plot(true[[i]][test_indices], pred[[i]], xlab="True", ylab="Predicted", main=names(true)[i])
+    abline(0, 1)
+  }}
 ```
 
+Relative error: (lambda_true-lambda_predicted) / lambda_true
+
+```{r}
+# relative error: (lambda_true-lambda_predicted) / lambda_true
+if (model == "musse")
+{ par(mfrow=c(4, 3))
+  for (i in 1:12){
+    plot(true[[i]][test_indices], (true[[i]][test_indices] - pred[[i]]) / true[[i]][test_indices], xlab="True", ylab="Relative error", main=names(true)[i])
+    abline(0, 0)
+  }}
+
+# geosse model (7 parameters)
+else if (model == "geosse")
+{ par(mfrow=c(4, 2))
+  for (i in 1:7){
+    plot(true[[i]][test_indices], (true[[i]][test_indices] - pred[[i]]) / true[[i]][test_indices], xlab="True", ylab="Relative error", main=names(true)[i])
+    abline(0, 0)
+  }}
+
+# bisse model (5 parameters)
+else if (model == "bisse")
+{ par(mfrow=c(3, 2))
+  for (i in 1:5){
+    plot(true[[i]][test_indices], (true[[i]][test_indices] - pred[[i]]) / true[[i]][test_indices], xlab="True", ylab="Relative error", main=names(true)[i])
+    abline(0, 0)
+  }}
+
+# bisseness model (10 parameters)
+else if (model == "bisseness")
+{ par(mfrow=c(5, 2))
+  for (i in 1:10){
+    plot(true[[i]][test_indices], (true[[i]][test_indices] - pred[[i]]) / true[[i]][test_indices], xlab="True", ylab="Relative error", main=names(true)[i])
+    abline(0, 0)
+  }}
+
+# musse4 model (20 parameters)
+else if (model == "musse4")
+{ par(mfrow=c(10, 2))
+  for (i in 1:20){
+    plot(true[[i]][test_indices], (true[[i]][test_indices] - pred[[i]]) / true[[i]][test_indices], xlab="True", ylab="Relative error", main=names(true)[i])
+    abline(0, 0)
+  }}
+
+# classe model (10 parameters)
+else if (model == "classe")
+{ par(mfrow=c(5, 2))
+  for (i in 1:10){
+    plot(true[[i]][test_indices], (true[[i]][test_indices] - pred[[i]]) / true[[i]][test_indices], xlab="True", ylab="Relative error", main=names(true)[i])
+    abline(0, 0)
+  }}
+
+# bd model (2 parameters)
+else if (model == "bd")
+{ par(mfrow=c(1, 2))
+  for (i in 1:2){
+    plot(true[[i]][test_indices], (true[[i]][test_indices] - pred[[i]]) / true[[i]][test_indices], xlab="True", ylab="Relative error", main=names(true)[i])
+    abline(0, 0)
+  }}
+```
+
+Absolute error: |lambda_true-lambda_predicted|
+
+```{r}
+# absolute error: |lambda_true-lambda_predicted|
+if (model == "musse")
+{ par(mfrow=c(4, 3))
+  for (i in 1:12){
+    plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
+    abline(0, 0)
+    abline(h=mean(abs(true[[i]][test_indices] - pred[[i]])), col="red")
+    # legend
+    legend("topright", legend=c("mean"), col=c("red"), lty=1:1, cex=0.8)
+  }}
+
+# bd model (2 parameters)
+else if (model == "bd")
+{ par(mfrow=c(1, 2))
+  for (i in 1:2){
+    plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
+    abline(0, 0)
+    abline(h=mean(abs(true[[i]][test_indices] - pred[[i]])), col="red")
+    # legend
+    legend("topright", legend=c("mean"), col=c("red"), lty=1:1, cex=0.8)
+  }}
+
+# geosse model (7 parameters)
+else if (model == "geosse")
+{ par(mfrow=c(4, 2))
+  for (i in 1:7){
+    plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
+  }}
+
+# bisse model (5 parameters)
+else if (model == "bisse")
+{ par(mfrow=c(3, 2))
+  for (i in 1:5){
+    plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
+  }}
+
+# bisseness model (10 parameters)
+else if (model == "bisseness")
+{ par(mfrow=c(5, 2))
+  for (i in 1:10){
+    plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
+  }}
+
+# musse4 model (20 parameters)
+else if (model == "musse4")
+{ par(mfrow=c(10, 2))
+  for (i in 1:20){
+    plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
+  }}
+
+# classe model (10 parameters)
+else if (model == "classe")
+{ par(mfrow=c(5, 2))
+  for (i in 1:10){
+    plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
+  }}
+```

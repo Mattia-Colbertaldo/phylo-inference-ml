@@ -13,8 +13,9 @@ knitr::opts_knit$set(root.dir = "../")
 
 ```{r}
 source("R/phylo-inference-ml.R")
-model <- "crbd" # type of the model, either: "crbd" or "bisse"
-n_trees <- 100 # number of trees to generate
+model <- "bisseness" # type of the model, either: "crbd" or "bisse"
+expname <- "30_4"
+n_trees <- 1000 # number of trees to generate
 n_taxa <- c(100, 1000) # range size of the generated phylogenies
 compute_mle <- TRUE # should mle predictions be computed and saved
 ```
@@ -23,8 +24,8 @@ Define space parameters.
 
 ```{r}
 # For the CRBD model
-lambda_range <- c(0.1, 1.0) # speciation rate
-epsilon_range <- c(0.0, 0.9) # turnover rate
+lambda_range <- c(0.1, 0.73) # speciation rate
+epsilon_range <- c(0.0, 0.75) # turnover rate
 param.range.crbd <- list(
   "lambda" = lambda_range,
   "epsilon" = epsilon_range
@@ -32,19 +33,57 @@ param.range.crbd <- list(
 
 # For the BiSSE model
 lambda_range <- c(0.1, 1.) # speciation rate
-q_range <- c(0.01, 0.1) # transition rate
+q_range <- c(0.1, 0.9) # transition rate
+p_range <- c(0.1, 0.9) # p0c, p0a, p1c, p1a: Conditional probabilities of shifting character states during speciation or lineage development.
 param.range.bisse <- list(
   "lambda" = lambda_range,
+  "mu" = q_range,
   "q" = q_range
 )
 
+param.range.musse <- list(
+  "lambda" = lambda_range,
+  "mu" = epsilon_range,
+  "q" = q_range
+)
+
+param.range.geosse <- list(
+  "lambda" = lambda_range,
+  "mu" = epsilon_range,
+  "q" = q_range
+)
+
+param.range.musse4 <- list(
+  "lambda" = lambda_range,
+  "mu" = epsilon_range,
+  "q" = q_range
+)
+
+param.range.bisseness <- list(
+  "lambda" = lambda_range,
+  "mu" = epsilon_range,
+  "q" = q_range,
+  "p" = p_range
+)
+
+param.range.classe <- list(
+  "lambda" = lambda_range,
+  "mu" = epsilon_range,
+  "q" = q_range
+)
 # Select the parameter space of the choosen diversification model
 param.range.list <- list(
   "crbd" = param.range.crbd,
-  "bisse" = param.range.bisse
+  "bisse" = param.range.bisse,
+  "musse" = param.range.musse,
+  "geosse" = param.range.geosse,
+  "musse4" = param.range.musse4,
+  "bisseness" = param.range.bisseness,
+  "classe" = param.range.classe
 )
 param.range <- param.range.list[[model]]
 ```
+
 
 Generating and saving phylogenies
 
@@ -53,6 +92,6 @@ out <- generatePhylo(model, n_trees, n_taxa, param.range)
 phylo <- out$trees
 params <- out$param
 
-saveRDS(phylo, paste("data/phylogeny-", model, "-new.rds", sep=""))
-saveRDS(params, paste("data/true-parameters-", model, "-new.rds", sep=""))
+saveRDS(phylo, paste("data/phylogeny-", model, "-", expname,  "-honest.rds", sep=""))
+saveRDS(params, paste("data/true-parameters-", model, "-", expname, "-honest.rds", sep=""))
 ```

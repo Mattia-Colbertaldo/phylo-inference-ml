@@ -21,12 +21,12 @@ before giving them to the DNN,
 so that they are all put on an equal footing. 
 
 ```{r}
-source(here("R","phylo-inference-ml.R"))
+source("R/phylo-inference-ml.R")
 set.seed(113)
-cblv <- readRDS("data/new-phylogeny-crbd-cblv.rds")
-true <- readRDS("data/new-phylogeny-crbd-true.rds")
+cblv <- readRDS("data/phylogeny-musse-new-sumstat.rds")
+true <- readRDS("data/true-parameters-musse-new.rds")
 n_taxa <- c(100, 1000) # range of phylogeny size
-device = "cpu" # change if you want to compute GPUs
+device = "gpu" # change if you want to compute GPUs
 ```
 
 
@@ -49,6 +49,9 @@ valid_indices <- sample(not_train_indices, n_valid)
 test_indices  <- setdiff(not_train_indices, valid_indices)
 
 # Create the datasets.
+x <- cblv[1:nrow(cblv), train_indices]
+y <- extract_elements(true, train_indices)
+train_ds <- ds(x, y)
 train_ds <- ds(cblv[1:nrow(cblv), train_indices], 
                extract_elements(true, train_indices))
 valid_ds <- ds(cblv[1:nrow(cblv), valid_indices], 
@@ -67,7 +70,7 @@ test_dl  <- test_ds  %>% dataloader(batch_size=1, shuffle=FALSE)
 ```{r}
 n_hidden <- 8
 n_layer  <- 4
-ker_size <- 10
+ker_size <- 3
 n_input  <- nrow(cblv)
 n_out    <- length(true)
 p_dropout <- 0.01
@@ -119,6 +122,11 @@ cnn.net <- nn_module(
       self$fc2()
   }
 )
+cat("n_input:", n_input, "\n")
+cat("n_out:", n_out, "\n")
+cat("n_hidden:", n_hidden, "\n")
+cat("n_layer:", n_layer, "\n")
+cat("ker_size:", ker_size, "\n")
 
 cnn <- cnn.net(n_input, n_out, n_hidden, n_layer, ker_size) # create CNN
 cnn$to(device = device) # Move it to the choosen GPU
@@ -205,8 +213,8 @@ names(pred) <- names(true)
 
 # Compute predictions 
 coro::loop(for (b in test_dl) {
-  out <- cnn(b$x$to(device = device))
-  p <- as.numeric(out$to(device = "cpu")) # move the tensor to CPU 
+  out <- cnn(b$x$to(device = "gpu"))
+  p <- as.numeric(out$to(device = "gpu")) # move the tensor to CPU 
   for (i in 1:n_out){pred[[i]] <- c(pred[[i]], p[i])}
 })
 ```

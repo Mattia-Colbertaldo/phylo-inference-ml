@@ -176,6 +176,26 @@ encode_bisse <- function(tree){
   return(encoding)
 }
 
+encode_musse <- function(tree){
+  inorder <- traverse_inorder(tree)
+  tips   <- c()
+  nodes  <- c()
+  states <- c()
+  dist_to_root <- castor::get_all_distances_to_root(tree)
+  dist_to_ancestor <- get_all_distances_to_ancestor(tree)
+  for (node in inorder){
+    if (is_tip(node, tree)){
+      tips <- c(tips, dist_to_ancestor[node])
+      states <- c(states, tree$tip.state[[node]])
+    }
+    else{
+      nodes <- c(nodes, dist_to_root[node])
+    }
+  }
+  encoding <- list("nodes" = nodes, "tips" = tips, "states" = states)
+  return(encoding)
+}
+
 
 #' Format the encoding of a phylo tree
 #'
@@ -251,4 +271,26 @@ generate_encoding_bisse <- function(trees, n_taxa){
   
 }
 
+generate_encoding_musse <- function(trees, n_taxa){
+  max_taxa <- max(n_taxa)
+  n_trees <- length(trees)
+  list.encode <- list()
+
+  cat("Computing encoding vectors...\n")
+  
+  for (n in 1:n_trees){
+    progress(n, n_trees, progress.bar = TRUE, init = (n==1))
+    tree <- trees[[n]] # extract tree
+    tree.encode   <- encode_musse(tree) # encode the tree
+    format.encode <- format_encode(tree.encode, max_taxa) # format the encoding
+    list.encode[[n]] <- format.encode # save to list 
+  }
+  
+  # Convert the list of vectors to a torch tensor 
+  matrix.encode <- as.data.frame(do.call(cbind, list.encode)) %>% 
+    as.matrix() 
+  
+  cat("\nComputing encoding vectors... Done.\n")
+  
+}
 
