@@ -1471,7 +1471,7 @@ generatePhyloClasse <- function(n_trees, n_taxa, param.range, ss_check = TRUE){
         {
           tree <- tree.classe(vec.param, max.taxa = n_taxa.i, x0 = NA)
           if (!(all(tree$tip.state == 0) | all(tree$tip.state == 1))){
-            lik <- make.classe(tree, tree$tip.state)}
+            lik <- make.classe(tree, tree$tip.state, k=2)}
             },
         error = function(e) {
           # This error is an open issue of diversitree package

@@ -1,6 +1,7 @@
 ---
 title: "Predict phylogeny parameters with DNN and Summary statistics"
 output: html_document
+knitr: opts_knit$set(root.dir = "../")
 editor_options: 
   chunk_output_type: console
 ---
@@ -42,7 +43,7 @@ total_number_phylogenies <- nrow(sumstat)
 n_train    <- 0.7 * total_number_phylogenies
 n_valid    <- 0.2 * total_number_phylogenies
 n_test     <- 0.1 * total_number_phylogenies
-batch_size <- 64
+batch_size <- 128
 
 # 
 
@@ -71,9 +72,9 @@ test_dl  <- test_ds  %>% dataloader(batch_size=1, shuffle=FALSE)
 n_in      <- length(train_ds[1]$x) # number of neurons of the input layer 
 n_out     <- length(true)
 n_hidden  <- 1000 # number of neurons in the hidden layers 
-p_dropout <- 0.05 # dropout probability 
+p_dropout <- 0.2 # dropout probability 
 n_epochs  <- 1000 # maximum number of epochs for the training 
-patience  <- 50 # patience of the early stopping 
+patience  <- 10 # patience of the early stopping 
 
 # Build the neural network.
 dnn.net <- nn_module(
@@ -227,6 +228,48 @@ else if (model == "geosse")
     plot(true[[i]][test_indices], pred[[i]], xlab="True", ylab="Predicted", main=names(true)[i])
     abline(0, 1)
   }}
+
+# bisse model (5 parameters)
+else if (model == "bisse")
+{ par(mfrow=c(3, 2))
+  for (i in 1:5){
+    plot(true[[i]][test_indices], pred[[i]], xlab="True", ylab="Predicted", main=names(true)[i])
+    abline(0, 1)
+  }}
+
+# bisseness model (10 parameters)
+else if (model == "bisseness")
+{ par(mfrow=c(5, 2))
+  for (i in 1:10){
+    plot(true[[i]][test_indices], pred[[i]], xlab="True", ylab="Predicted", main=names(true)[i])
+    abline(0, 1)
+    # plot trend line
+    abline(lm(pred[[i]] ~ true[[i]][test_indices]), col="red")
+  }}
+
+# musse4 model (20 parameters)
+else if (model == "musse4")
+{ par(mfrow=c(5, 4))
+  for (i in 1:20){
+    plot(true[[i]][test_indices], pred[[i]], xlab="True", ylab="Predicted", main=names(true)[i])
+    abline(0, 1)
+  }}
+
+# classe model (10 parameters)
+else if (model == "classe")
+{ par(mfrow=c(5, 2))
+  for (i in 1:10){
+    plot(true[[i]][test_indices], pred[[i]], xlab="True", ylab="Predicted", main=names(true)[i])
+    abline(0, 1)
+  }}
+
+# bd model (2 parameters)
+else if (model == "bd")
+{ par(mfrow=c(1, 2))
+  for (i in 1:2){
+    plot(true[[i]][test_indices], pred[[i]], xlab="True", ylab="Predicted", main=names(true)[i])
+    abline(0, 1)
+  }}
 ```
 
 Relative error: (lambda_true-lambda_predicted) / lambda_true
@@ -266,7 +309,7 @@ else if (model == "bisseness")
 
 # musse4 model (20 parameters)
 else if (model == "musse4")
-{ par(mfrow=c(10, 2))
+{ par(mfrow=c(5, 4))
   for (i in 1:20){
     plot(true[[i]][test_indices], (true[[i]][test_indices] - pred[[i]]) / true[[i]][test_indices], xlab="True", ylab="Relative error", main=names(true)[i])
     abline(0, 0)
@@ -337,7 +380,7 @@ else if (model == "bisseness")
 
 # musse4 model (20 parameters)
 else if (model == "musse4")
-{ par(mfrow=c(10, 2))
+{ par(mfrow=c(5, 4))
   for (i in 1:20){
     plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
   }}
@@ -348,4 +391,9 @@ else if (model == "classe")
   for (i in 1:10){
     plot(true[[i]][test_indices], abs(true[[i]][test_indices] - pred[[i]]), xlab="True", ylab="Absolute error", main=names(true)[i])
   }}
+```
+
+
+
+```{r}
 ```

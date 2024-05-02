@@ -26,7 +26,7 @@ knitr::opts_knit$set(root.dir = "../")
 ```{r}
 source("R/phylo-inference-ml.R")
 model <- "musse" # change if needed
-expname <- "honest" # change if needed
+expname <- "10k-honest" # change if needed
 set.seed(113)
 phylo <- readRDS(paste("data/phylogeny-", model, "-", expname, ".rds", sep="")) # change file name if needed
 true_params <- readRDS(paste("data/true-parameters-", model, "-", expname, ".rds", sep="")) # same
@@ -108,3 +108,5 @@ Saving
 saveRDS(graphs, paste("data/phylogeny-", model, "-", expname, "-graph.rds", sep=""))
 ```
 
+```{r}
+```
